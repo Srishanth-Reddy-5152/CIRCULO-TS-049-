@@ -1,0 +1,24 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Secrets & Credentials (DO NOT COMMIT SENSITIVE API KEYS)
+.streamlit/secrets.toml
+*.env
+.env.*
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Temporary logs
+*.log

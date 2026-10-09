@@ -1,0 +1,107 @@
+{
+  "esp32": {
+    "name": "ESP32 Development Board",
+    "category": "Electronics > Development Boards",
+    "capabilities": ["microcontroller", "wifi", "bluetooth", "iot", "gpio", "prototyping", "embedded"],
+    "aliases": ["esp-32", "esp32 devkit", "esp32 wroom", "wifi microcontroller", "iot board"],
+    "tags": ["esp32", "embedded", "iot", "electronics", "wireless"]
+  },
+  "arduino uno": {
+    "name": "Arduino Uno R3",
+    "category": "Electronics > Development Boards",
+    "capabilities": ["microcontroller", "gpio", "analog input", "prototyping", "embedded", "5v logic"],
+    "aliases": ["uno", "arduino uno board", "atmega328p"],
+    "tags": ["arduino", "embedded", "electronics", "robotics"]
+  },
+  "arduino nano": {
+    "name": "Arduino Nano",
+    "category": "Electronics > Development Boards",
+    "capabilities": ["microcontroller", "gpio", "analog input", "prototyping", "compact", "breadboard friendly"],
+    "aliases": ["nano", "arduino nano board"],
+    "tags": ["arduino", "embedded", "electronics", "compact"]
+  },
+  "raspberry pi": {
+    "name": "Raspberry Pi 4 (4GB)",
+    "category": "Electronics > Single Board Computers",
+    "capabilities": ["single board computer", "linux", "wifi", "bluetooth", "hdmi output", "usb 3.0", "iot", "python"],
+    "aliases": ["rpi", "rpi 4", "raspberry pi 4", "mini pc"],
+    "tags": ["raspberry pi", "linux", "iot", "computer", "python"]
+  },
+  "hdmi cable": {
+    "name": "High-Speed HDMI Cable (1.5m)",
+    "category": "Cables & Connectivity > Video",
+    "capabilities": ["video transmission", "hdmi", "display output", "projector connection", "monitor connection", "audio transmission"],
+    "aliases": ["hdmi", "hdmi cord", "projector cable", "display cable"],
+    "tags": ["cable", "hdmi", "display", "projector", "presentation"]
+  },
+  "usb-c to hdmi adapter": {
+    "name": "USB-C to HDMI 4K Adapter",
+    "category": "Cables & Connectivity > Adapters",
+    "capabilities": ["video transmission", "hdmi", "usb-c", "projector connection", "macbook display", "type-c video"],
+    "aliases": ["type c to hdmi", "usbc hdmi", "macbook projector adapter", "type-c converter"],
+    "tags": ["adapter", "usb-c", "hdmi", "display", "macbook", "laptop"]
+  },
+  "vga adapter": {
+    "name": "HDMI to VGA Converter with Audio",
+    "category": "Cables & Connectivity > Adapters",
+    "capabilities": ["video transmission", "vga", "legacy projector", "projector connection", "analog display"],
+    "aliases": ["hdmi to vga", "vga cable", "vga connector", "old projector adapter"],
+    "tags": ["adapter", "vga", "projector", "display", "converter"]
+  },
+  "digital multimeter": {
+    "name": "Digital Multimeter (Auto-ranging)",
+    "category": "Lab & Measurement > Testing",
+    "capabilities": ["voltage measurement", "current measurement", "resistance measurement", "continuity test", "circuit debugging"],
+    "aliases": ["multimeter", "dmm", "voltmeter", "ammeter", "tester"],
+    "tags": ["measurement", "testing", "electronics", "debugging", "lab"]
+  },
+  "soldering iron": {
+    "name": "60W Temperature Controlled Soldering Iron Kit",
+    "category": "Tools & Workshop > Prototyping",
+    "capabilities": ["soldering", "pcb assembly", "wire joining", "electronics repair", "hardware prototyping"],
+    "aliases": ["soldering kit", "solder gun", "soldering rod"],
+    "tags": ["tools", "soldering", "hardware", "assembly", "repair"]
+  },
+  "scientific calculator": {
+    "name": "Casio fx-991EX ClassWiz Calculator",
+    "category": "Academic & Stationery > Calculators",
+    "capabilities": ["scientific calculation", "matrix calculation", "equation solver", "statistics", "exam approved"],
+    "aliases": ["casio calculator", "casio fx991", "scientific calc", "exam calculator"],
+    "tags": ["calculator", "academic", "exam", "engineering", "math"]
+  },
+  "ultrasonic sensor": {
+    "name": "HC-SR04 Ultrasonic Distance Sensor",
+    "category": "Electronics > Sensors",
+    "capabilities": ["distance measurement", "obstacle detection", "robotics", "gpio", "5v logic"],
+    "aliases": ["hc-sr04", "sonar sensor", "distance sensor", "ultrasonic"],
+    "tags": ["sensor", "robotics", "arduino", "iot", "distance"]
+  },
+  "dht11 sensor": {
+    "name": "DHT11 Temperature & Humidity Sensor",
+    "category": "Electronics > Sensors",
+    "capabilities": ["temperature measurement", "humidity measurement", "weather monitoring", "gpio", "iot"],
+    "aliases": ["dht11", "temp sensor", "humidity sensor"],
+    "tags": ["sensor", "weather", "iot", "environment", "arduino"]
+  },
+  "breadboard and jumper wires": {
+    "name": "830-Point Breadboard + 65 Jumper Wires",
+    "category": "Electronics > Prototyping Accessories",
+    "capabilities": ["prototyping", "circuit building", "solderless testing", "gpio connections"],
+    "aliases": ["breadboard", "jumper cables", "male-to-male wires", "bread board"],
+    "tags": ["breadboard", "wiring", "prototyping", "electronics"]
+  },
+  "engineering drawing kit": {
+    "name": "Complete Mini Drafter & Engineering Drawing Set",
+    "category": "Academic & Stationery > Drawing Tools",
+    "capabilities": ["drafting", "engineering drawing", "geometric construction", "t-square", "compass set"],
+    "aliases": ["drafter", "mini drafter", "ed kit", "drawing sheet board"],
+    "tags": ["drawing", "mechanical", "civil", "academic", "drafting"]
+  },
+  "higher engineering mathematics": {
+    "name": "Higher Engineering Mathematics by B.S. Grewal",
+    "category": "Academic & Stationery > Textbooks",
+    "capabilities": ["calculus", "differential equations", "linear algebra", "engineering math", "reference book"],
+    "aliases": ["bs grewal", "grewal math", "math textbook", "sem 1 math"],
+    "tags": ["textbook", "math", "academic", "engineering", "books"]
+  }
+}

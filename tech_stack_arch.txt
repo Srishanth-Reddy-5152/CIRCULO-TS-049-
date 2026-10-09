@@ -1,0 +1,803 @@
+CIRCULO — Technology Stack & Website Architecture
+Complete technical specification: languages, frameworks, database, AI layer, folder structure, page-by-page website design, deployment and risks
+Companion to the CIRCULO SDG 12 Hackathon Project Dossier. The dossier defines what is being built and why; this document defines exactly what it is built with and how the pieces fit together. Where the two overlap (database, matching, screens), this document is the more detailed technical reference. Cost figures and sample data referred to here are demo assumptions and must be labeled as such in the prototype.
+1. Stack at a Glance
+Layer
+Choice
+Why this choice
+Language
+Python 3.11+ (plus SQL)
+One language for UI, logic, matching and data; fastest for a 3-person, 24-hour build.
+Frontend / UI
+Streamlit (multipage app)
+Pure-Python UI; no separate JavaScript build, API layer or CORS to debug.
+Backend
+Python service modules inside the same app
+No separate server to deploy or connect; business logic lives in plain functions.
+Database
+SQLite (single file: circulo.db)
+Zero setup, ships with Python, relational, enough for a campus demo.
+DB access
+Python sqlite3 (standard library)
+No ORM overhead; parameterised queries in one db.py module.
+Need understanding
+Keyword extraction + capability dictionary; optional LLM → JSON
+Deterministic first, so the demo works offline; LLM is an enhancement with fallback.
+Matching
+Capability overlap score + TF-IDF / cosine similarity (scikit-learn)
+Transparent, explainable, no training; embeddings are an optional upgrade.
+Decision engine
+Weighted scoring in plain Python
+Explainable ranking; weights editable in a config file.
+Charts
+Plotly (Streamlit native charts as fallback)
+Interactive impact dashboard with minimal code.
+Optional vision
+Vision-capable model API for Scan & Identify
+Optional feature; manual entry is always available as fallback.
+Version control
+Git + GitHub
+Shared repo for 3 members; also needed for Streamlit Cloud deployment.
+Deployment
+Streamlit Community Cloud (or run locally on a laptop)
+Free, deploys from GitHub; local run is the backup for demo day.
+ 
+Guiding rule from the project dossier: choose the stack the team already knows. A working Streamlit + SQLite prototype beats an unfinished React + FastAPI + MongoDB + separate AI server. If the team already has a working React stack, it can replace the Streamlit layer without changing the database or logic modules.
+2. Languages, Runtime and Environment
+Item
+Specification
+Primary language
+Python 3.11 or newer
+Query language
+SQL (SQLite dialect)
+Config / data formats
+JSON for the capability dictionary and seed data; TOML for Streamlit secrets and settings; Python dictionary or JSON for decision weights
+Environment isolation
+python -m venv .venv (one virtual environment per developer)
+Dependency file
+requirements.txt at the repo root; pin exact versions with pip freeze once everything works, so every member and the deployment use the same versions
+Editor
+VS Code (or any editor the team prefers)
+OS
+Any (Windows, macOS, Linux); the app uses no OS-specific features
+ 
+3. Frontend: Streamlit
+3.1 Why Streamlit
+The whole UI is written in Python, so the AI/matching member can call logic functions directly from the page code.
+Built-in widgets cover everything needed: text areas, forms, selectboxes, buttons, metrics, tabs, columns, file/camera upload and charts.
+Multipage navigation, session state and caching are built in.
+Deployment is a push to GitHub.
+3.2 Streamlit features used
+Feature
+Used for
+Multipage app (pages/ folder or st.navigation)
+The seven website pages plus login and optional admin page.
+st.session_state
+Logged-in user, current search text, parsed requirements, ranked results, selected option, flash messages.
+st.form / st.form_submit_button
+Login form, Need form, List-a-Resource form (one submit, no rerun per keystroke).
+st.columns / st.container
+Card layouts for results, options and impact tiles.
+st.metric
+Impact dashboard tiles (resources circulated, borrows, purchases avoided, savings).
+st.progress / star text
+Capability match percentage on result cards.
+st.tabs
+Separating Borrow / Repair / Buy Used / Buy New views and “My Resources” statuses.
+st.cache_resource / st.cache_data
+One shared SQLite connection; one fitted TF-IDF model; cached capability dictionary.
+st.switch_page
+Moving from Need → Results → Decision.
+st.camera_input / st.file_uploader
+Optional Scan & Identify photo capture on the I Have page.
+st.secrets
+API keys (optional LLM / vision) kept out of the repo.
+ 
+3.3 Styling
+Keep the default Streamlit theme with a small .streamlit/config.toml (primary colour green to signal sustainability, light background). Use a small amount of custom CSS through st.markdown only for result cards and the recommendation badge. Do not spend demo-critical hours on pixel-level design.
+4. Backend Architecture
+There is no separate API server. The “backend” is a set of Python modules imported by the Streamlit pages. This avoids integration risk between three people working in parallel. Each module has one responsibility so it can be built and tested independently.
+Module
+Responsibility
+Owner
+db.py
+Opens the SQLite connection, creates tables, provides query helpers (get_items, add_item, create_transaction, etc.).
+Member 2
+models / services (items.py, transactions.py)
+Add resource, update availability, request / approve / return, record impact events.
+Member 2
+auth.py
+Login, session user, role check (student / admin).
+Member 2
+need_processor.py
+Natural-language need → structured requirement (need, required capabilities, purpose).
+Member 3
+resource_processor.py
+Item name → category, capabilities and tags using the capability dictionary (or vision result).
+Member 3
+matcher.py
+Capability match score and TF-IDF similarity between a requirement and inventory.
+Member 3
+decision_engine.py
+Builds Borrow / Repair / Buy Used / Buy New options, scores and ranks them, generates the “Why CIRCULO recommends this” reasons.
+Member 3
+rescue.py
+Idle-item detection (Resource Rescue).
+Member 3
+impact.py
+Aggregates impact_events into dashboard figures.
+Member 2 / 3
+pages/*.py, app.py
+Streamlit UI that calls the modules above.
+Member 1
+ 
+4.1 What AI does and what ordinary software does
+AI / intelligence layer
+Deterministic software
+Natural language → requirement
+Availability and status changes
+Item name or photo → capabilities
+Borrowing, approving and returning
+Requirement → semantic matching
+Database reads and writes
+Notifications, calculations, transactions, impact totals
+ 
+Reasoning for judges: AI is used where interpretation and semantic matching are required. Transactions and inventory need reliability, so they are handled by deterministic code.
+5. Database: SQLite
+5.1 Decision
+Database: SQLite, stored as a single file circulo.db in the project data/ folder. Access is through Python’s built-in sqlite3 module.
+Reason
+Detail
+Zero setup
+Ships with Python; nothing to install, host or configure.
+Relational
+Items, owners, transactions and capabilities are naturally relational (joins, foreign keys).
+Fast enough
+A campus demo has hundreds of rows, not millions.
+Portable
+Whole database is one file; copy it to restore a clean demo state.
+Easy seeding
+A seed.py script rebuilds the database with realistic campus data in seconds.
+ 
+5.2 Connection settings
+PRAGMA foreign_keys = ON on every connection, since SQLite does not enforce foreign keys by default.
+PRAGMA journal_mode = WAL to reduce locking when the app reads and writes during the demo.
+Open one cached connection with check_same_thread=False, wrapped in st.cache_resource.
+Use parameterised queries (? placeholders) everywhere; never build SQL by string concatenation.
+5.3 Tables
+This extends the schema in the dossier. Tables marked “new” were added to support specific features.
+Table
+Fields
+Purpose
+users
+id, name, email (unique), department, role, password_hash, created_at
+Students, lab accounts and admins. Role is student, lab or admin.
+categories
+id, name (unique), parent_id, synonyms
+Category tree (Electronics → Development Board) and keyword synonyms for search.
+items
+id, owner_id, name, category_id, description, condition, location, quantity, quantity_available, availability, available_for, available_until, last_used, created_at
+Every listed resource. quantity_available handles listings with more than one unit.
+item_capabilities
+item_id, capability (composite primary key)
+One row per capability; powers capability matching.
+requests
+id, user_id, item_id (nullable), description, parsed_json, status, created_at
+The user’s natural-language need and its parsed structure.
+transactions
+id, item_id, owner_id, borrower_id, request_id, start_date, due_date, returned_at, status
+Borrow lifecycle.
+repairs
+id, item_id, issue, estimated_cost, status
+Repair route data for damaged items.
+impact_events
+id, user_id, item_id, transaction_id, action, metric_type, estimated_saving, methodology, created_at
+Impact log; stores estimated values and the method used, not claimed exact environmental figures.
+price_reference (new)
+item_key, repair_cost, used_price, new_price, note
+Demo cost data for the decision engine; labeled as sample data unless backed by a real source.
+ 
+5.4 SQL definition
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  department TEXT,
+  role TEXT NOT NULL DEFAULT 'student'
+       CHECK (role IN ('student','lab','admin')),
+  password_hash TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+ 
+CREATE TABLE categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  parent_id INTEGER REFERENCES categories(id),
+  synonyms TEXT
+);
+ 
+CREATE TABLE items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  owner_id INTEGER NOT NULL REFERENCES users(id),
+  name TEXT NOT NULL,
+  category_id INTEGER REFERENCES categories(id),
+  description TEXT,
+  condition TEXT CHECK (condition IN ('New','Good','Fair')),
+  location TEXT,
+  quantity INTEGER NOT NULL DEFAULT 1,
+  quantity_available INTEGER NOT NULL DEFAULT 1,
+  availability TEXT NOT NULL DEFAULT 'available'
+       CHECK (availability IN
+       ('available','requested','borrowed','unavailable')),
+  available_for TEXT DEFAULT 'borrow',   -- borrow | donate | both
+  available_until TEXT,
+  last_used TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+ 
+CREATE TABLE item_capabilities (
+  item_id INTEGER NOT NULL REFERENCES items(id),
+  capability TEXT NOT NULL,
+  PRIMARY KEY (item_id, capability)
+);
+ 
+CREATE TABLE requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  item_id INTEGER REFERENCES items(id),
+  description TEXT NOT NULL,
+  parsed_json TEXT,
+  status TEXT NOT NULL DEFAULT 'pending'
+       CHECK (status IN
+       ('pending','matched','fulfilled','cancelled')),
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+ 
+CREATE TABLE transactions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_id INTEGER NOT NULL REFERENCES items(id),
+  owner_id INTEGER NOT NULL REFERENCES users(id),
+  borrower_id INTEGER NOT NULL REFERENCES users(id),
+  request_id INTEGER REFERENCES requests(id),
+  start_date TEXT,
+  due_date TEXT,
+  returned_at TEXT,
+  status TEXT NOT NULL DEFAULT 'requested'
+       CHECK (status IN
+       ('requested','approved','borrowed',
+        'returned','rejected','overdue'))
+);
+ 
+CREATE TABLE repairs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_id INTEGER NOT NULL REFERENCES items(id),
+  issue TEXT,
+  estimated_cost REAL,
+  status TEXT DEFAULT 'open'
+);
+ 
+CREATE TABLE impact_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER REFERENCES users(id),
+  item_id INTEGER REFERENCES items(id),
+  transaction_id INTEGER REFERENCES transactions(id),
+  action TEXT NOT NULL,        -- borrow | repair | reuse | buy_used
+  metric_type TEXT,
+  estimated_saving REAL,
+  methodology TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+ 
+CREATE TABLE price_reference (
+  item_key TEXT PRIMARY KEY,
+  repair_cost REAL,
+  used_price REAL,
+  new_price REAL,
+  note TEXT DEFAULT 'demo data'
+);
+ 
+5.5 Availability state machine
+Event
+items.availability
+transactions.status
+Owner lists item
+available
+—
+Borrower clicks Request
+requested
+requested
+Owner approves
+borrowed (quantity_available reduced)
+approved → borrowed
+Owner rejects
+available
+rejected
+Item returned
+available (quantity_available restored; last_used updated)
+returned
+Due date passes without return
+borrowed
+overdue
+ 
+For listings with more than one unit (for example four ESP32 boards), availability changes only when quantity_available reaches zero. The status change and impact event are written in a single database transaction so the UI never shows an item as available when it is not.
+5.6 Seed data
+seed.py creates realistic campus data: about 10 demo users across CSE, ECE and other departments, 40–60 items (ESP32, Arduino Uno and Nano, Raspberry Pi, HDMI cable, USB-C to HDMI adapter, VGA adapter, calculators, textbooks, lab components), their capabilities, a few past transactions, and several items with old last_used dates so Resource Rescue has something to show. Seed data is clearly demo data.
+5.7 Persistence on hosting
+Streamlit Community Cloud storage should be treated as ephemeral: files written at runtime may be lost when the app restarts. For the hackathon, the app rebuilds circulo.db from seed.py when the file is missing. If persistent live data is needed, the same schema moves to a hosted Postgres service (for example Supabase) with only db.py changing. Keeping all SQL in db.py makes that swap small.
+6. AI and Matching Layer
+6.1 Build order: deterministic first
+Level
+Technique
+Status
+Level 1 (must have)
+Keyword extraction + capability dictionary + capability overlap score
+Always works offline; this is the demo baseline.
+Level 2 (should have)
+TF-IDF + cosine similarity (scikit-learn) over item names, descriptions, tags and capabilities
+Lets “connect laptop to projector” reach HDMI cable and adapters.
+Level 3 (optional)
+LLM converts the request to structured JSON; falls back to Level 1 if the call fails
+Better understanding of free-form need.
+Level 4 (optional)
+Small embedding model (for example sentence-transformers all-MiniLM-L6-v2) for semantic search
+Only if the team is already comfortable; adds download size and load time.
+Optional feature
+Vision model for Scan & Identify
+Photo → item name, category, capabilities; owner confirms.
+ 
+6.2 Capability dictionary
+A Python dictionary (or JSON file) maps item keys to capabilities, categories and tags. It is used both to structure new listings and to interpret needs.
+CAPABILITIES = {
+  "esp32": {
+    "name": "ESP32 Dev Board",
+    "category": "Electronics > Development Board",
+    "capabilities": ["microcontroller","wifi","bluetooth",
+                     "iot","gpio","prototyping"],
+    "tags": ["esp32","embedded","iot","electronics"]},
+  "arduino uno": {
+    "name": "Arduino Uno",
+    "category": "Electronics > Development Board",
+    "capabilities": ["microcontroller","gpio",
+                     "analog input","prototyping"],
+    "tags": ["arduino","embedded","electronics"]},
+  "raspberry pi": {
+    "name": "Raspberry Pi",
+    "category": "Electronics > Single Board Computer",
+    "capabilities": ["single board computer","wifi",
+                     "linux","iot"],
+    "tags": ["raspberry pi","linux","iot"]},
+}
+ 
+6.3 Need understanding
+Input: “I need a WiFi microcontroller for my IoT project.” Output (stored in requests.parsed_json):
+{
+  "need": "microcontroller",
+  "required_capabilities": ["wifi", "iot"],
+  "purpose": "IoT project"
+}
+ 
+Level 1 uses a keyword and synonym lookup against the capability vocabulary. If an LLM is configured, it is asked to return only this JSON shape; the response is validated, and on any error the keyword result is used instead, so the page never breaks.
+6.4 Matching and ranking
+match_score = matched_capabilities / required_capabilities
+Item
+Capabilities matched
+Match score
+ESP32
+microcontroller, wifi, iot (3 of 3)
+100%
+Arduino Uno
+microcontroller, iot (2 of 3)
+67%
+Arduino Nano
+microcontroller, iot (2 of 3)
+67%
+ 
+Where a requirement is a goal rather than a product (for example connecting a laptop to a projector), TF-IDF cosine similarity between the request text and each item’s text fields supplies the candidate list, and the capability score refines the order.
+6.5 Circular decision engine
+Factor
+Weight
+Notes
+Compatibility
+40%
+Capability match score.
+Availability
+25%
+Available now, quantity available, available_until.
+Cost
+15%
+Borrow ₹0 scores highest; buy new lowest (sample prices from price_reference).
+Proximity
+10%
+Same department or location scores higher.
+Circularity
+10%
+Borrow > Repair > Reuse > Buy Used > Buy New.
+ 
+score = compatibility × 0.40 + availability × 0.25 + cost_score × 0.15 + proximity × 0.10 + circularity × 0.10
+These are prototype decision weights, not scientifically universal values. They live in a single config dictionary so they can be changed live and shown to judges. The routes evaluated are Borrow, Repair, Reuse, Buy Used and Buy New; Recycle/dispose is shown only for items at end of life.
+6.6 Explanations
+The “Why CIRCULO recommends this” list is generated from the scoring inputs, with no AI needed: for example “100% capability match”, “Available now”, “Free to borrow”, “Same department”, “Can be returned after your project”, “Avoids a new purchase”. Each line appears only if the underlying data supports it.
+6.7 Resource Rescue and impact
+Resource Rescue: idle_days = today − last_used; items idle more than 30 days are flagged with a Make Available action.
+Impact: dashboard figures are aggregated from impact_events. Savings are stored as estimates with a methodology note. No CO₂ or waste figure is shown unless a documented method backs it.
+7. Project Folder Structure
+circulo/
+├── app.py                  # Entry point: login + navigation
+├── requirements.txt
+├── README.md
+├── .gitignore              # .venv, __pycache__, secrets.toml
+├── .streamlit/
+│   ├── config.toml         # Theme and server settings
+│   └── secrets.toml        # API keys (never committed)
+├── data/
+│   ├── circulo.db          # SQLite database (generated)
+│   ├── capabilities.json   # Capability dictionary
+│   └── seed_items.json     # Demo inventory
+├── pages/
+│   ├── 1_Need.py           # I Need
+│   ├── 2_Results.py        # Ranked matches
+│   ├── 3_Decision.py       # Borrow / Repair / Buy options
+│   ├── 4_I_Have.py         # List a resource
+│   ├── 5_My_Resources.py   # Manage listings
+│   ├── 6_Impact.py         # Impact dashboard + Rescue
+│   └── 7_Admin.py          # Optional admin view
+├── core/
+│   ├── db.py               # Connection, schema, queries
+│   ├── auth.py
+│   ├── items.py
+│   ├── transactions.py
+│   ├── need_processor.py
+│   ├── resource_processor.py
+│   ├── matcher.py
+│   ├── decision_engine.py
+│   ├── rescue.py
+│   ├── impact.py
+│   └── config.py           # Decision weights, thresholds
+├── scripts/
+│   └── seed.py             # Rebuild DB with demo data
+├── ui/
+│   ├── components.py       # Result card, badge, tiles
+│   └── style.css
+└── tests/
+    └── test_matcher.py     # A few checks on matching/scoring
+ 
+8. Website Structure
+8.1 Sitemap and navigation
+Page
+File
+Who can see it
+Leads to
+Login
+app.py
+Everyone
+Home
+Home
+app.py (landing view)
+Logged-in users
+Need, I Have, Impact
+Need
+pages/1_Need.py
+Student, lab, admin
+Results
+Results
+pages/2_Results.py
+Student, lab, admin
+Decision
+Decision
+pages/3_Decision.py
+Student, lab, admin
+Confirmation, My Resources, Impact
+I Have
+pages/4_I_Have.py
+Student, lab, admin
+My Resources
+My Resources
+pages/5_My_Resources.py
+Student, lab, admin
+I Have, Impact
+Impact
+pages/6_Impact.py
+Everyone logged in; institution view for admin
+Resource Rescue
+Admin (optional)
+pages/7_Admin.py
+Admin only
+Impact
+ 
+The two main journeys: (1) Home → Need → Results → Decision → Impact; (2) Home → I Have → My Resources → Impact. A sidebar shows the logged-in user and links to every page.
+8.2 Global layout
+Sidebar: CIRCULO name, logged-in user and role, page links, log-out.
+Header on each page: page title and one-line instruction.
+Content area: forms and cards in a single column on small widths, two or three columns for results and tiles.
+Flash messages (success/error) from st.session_state after actions.
+8.3 Page 0: Login
+Aspect
+Specification
+Purpose
+Identify the user (Student / Admin).
+Components
+Email field, password field, role shown after login; for demo, a “Continue as demo student / admin” button.
+Reads / writes
+Reads users; stores user in st.session_state.
+Logic
+auth.login(); passwords stored as salted hashes (hashlib.pbkdf2_hmac or bcrypt); demo accounts seeded.
+Failure handling
+Wrong credentials → inline error; no page access without a session user.
+ 
+8.4 Page 1: Home
+Aspect
+Specification
+Purpose
+Start a journey in one click.
+Components
+Tagline “Before you buy, check CIRCULO.”; two large buttons: I NEED SOMETHING and I HAVE SOMETHING; Campus Impact summary (three st.metric tiles); optional category shortcuts.
+Reads
+impact.summary() (totals only).
+Actions
+Buttons call st.switch_page to Need or I Have.
+ 
+8.5 Page 2: Need
+Aspect
+Specification
+Purpose
+Capture the requirement in natural language.
+Components
+Text area “What are you trying to accomplish?”; example chips (for example “connect laptop to a projector”); button Find Sustainable Options.
+Logic
+need_processor.parse(text) → structured requirement; save to requests (status pending); matcher.find(requirement) → ranked candidates; store in session_state.
+Writes
+requests row; session_state keys: request_id, parsed, candidates.
+Next
+Results.
+ 
+8.6 Page 3: Results
+Aspect
+Specification
+Purpose
+Show the matches and alternatives.
+Components
+“BEST MATCH” card (item, owner/location, capability match %, availability, Borrow button); “OTHER OPTIONS” list with match %; expandable “How we understood your need” panel showing parsed capabilities.
+Reads
+session_state candidates; items and item_capabilities.
+Empty state
+If nothing matches, show used/new purchase routes rather than pretending reuse is possible.
+Next
+Decision (selecting an item or choosing Compare all options).
+ 
+8.7 Page 4: Decision
+Aspect
+Specification
+Purpose
+Answer “How should you get it?” and complete the action.
+Components
+Option cards ranked by score: Borrow (₹0), Repair, Buy Used, Buy New with sample cost; badge on the recommended option; “Why CIRCULO recommends this” checklist; action button (Request to Borrow / Start Repair Request / View Used Option).
+Logic
+decision_engine.rank(requirement, candidates) → options with scores and reasons; transactions.create_request() on confirm.
+Writes
+transactions row (requested); items.availability = requested; request status = matched.
+Confirmation
+Success message with owner, location and due date; link to My Resources and Impact.
+ 
+8.8 Page 5: I Have
+Aspect
+Specification
+Purpose
+List a resource in under a minute.
+Components
+Item name; Condition (New / Good / Fair); Quantity; Location; Available for (Borrowing / Donation); available-until date (optional); Add Resource button; optional Upload Photo for Scan & Identify.
+Logic
+resource_processor.structure(name) → full name, category, capabilities, tags shown for the owner to confirm; items.add() writes items and item_capabilities.
+Fallback
+If photo recognition or AI fails, “Enter manually” continues with the dictionary or manual capability entry.
+Next
+My Resources.
+ 
+8.9 Page 6: My Resources
+Aspect
+Specification
+Purpose
+Let owners and borrowers manage their items and requests.
+Components
+Tabs: Listed by me / Borrowed by me / Incoming requests. Each item shows status (Available, Requested, Borrowed until date) and a Manage button; incoming requests have Approve / Reject; borrowed items have Mark Returned; + Add Resource button.
+Logic
+transactions.approve(), reject(), mark_returned(); each updates availability and last_used and writes an impact event on completion.
+Reads
+items, transactions filtered by the session user.
+ 
+8.10 Page 7: Impact
+Aspect
+Specification
+Purpose
+Show outcomes, honestly.
+Components
+Tiles: resources circulated, successful borrows, potential purchases avoided, estimated user savings, repairs facilitated; bar chart of most-circulated categories (Plotly); personal vs campus toggle; Resource Rescue panel listing idle items (idle days, owner) with Make Available.
+Logic
+impact.summary(), impact.by_category(), rescue.idle_items(threshold=30).
+Honesty rules
+Savings labeled “estimated”; no CO₂ or waste number without a documented method; sample data labeled as demo.
+ 
+8.11 Page 8 (optional): Admin
+Aggregate reuse and impact across departments, inventory by department or lab, category list management, and simple moderation of listings. Built only if time remains.
+8.12 Session state keys
+Key
+Meaning
+user
+Logged-in user id, name, role, department
+request_text
+Raw text the user typed
+parsed
+Structured requirement (need, capabilities, purpose)
+request_id
+Row id in requests
+candidates
+Ranked list of matching items with scores
+selected_item
+Item chosen on Results
+options
+Ranked Borrow/Repair/Buy options for Decision
+flash
+One-time success or error message
+ 
+9. End-to-End Data Flow
+Step
+What happens
+Module
+1
+User types a need on the Need page
+pages/1_Need.py
+2
+Text → structured requirement (keyword/LLM with fallback)
+need_processor.py
+3
+Requirement saved as a request
+db.py
+4
+Candidates found: TF-IDF similarity + capability overlap
+matcher.py
+5
+Routes built and scored; reasons generated
+decision_engine.py
+6
+Results and Decision pages rendered
+pages/2, pages/3
+7
+User requests a borrow; transaction created; availability set to requested
+transactions.py
+8
+Owner approves; item becomes borrowed; later marked returned
+pages/5_My_Resources.py
+9
+Inventory updated; impact event written
+impact.py
+10
+Dashboard and Resource Rescue reflect the new state
+pages/6_Impact.py
+ 
+10. Libraries (requirements.txt)
+Library
+Purpose
+Required?
+streamlit
+UI framework and multipage navigation
+Yes
+pandas
+Tabular handling for dashboard and tables
+Yes
+scikit-learn
+TF-IDF vectoriser and cosine similarity
+Yes
+plotly
+Interactive charts
+Yes (or Streamlit native charts)
+bcrypt (or hashlib from stdlib)
+Password hashing
+Yes (hashlib needs no install)
+python-dotenv
+Load local environment variables
+Optional
+anthropic or another LLM SDK
+Natural language → JSON, optional vision
+Optional
+sentence-transformers
+Embedding-based semantic search
+Optional
+pillow
+Image handling for Scan & Identify
+Optional
+pytest
+Basic tests for matching and scoring
+Optional
+ 
+sqlite3, json, datetime, hashlib and pathlib are in the Python standard library and need no installation. After the app works, run pip freeze > requirements.txt so exact versions are recorded.
+11. Configuration and Secrets
+API keys (LLM, vision) go in .streamlit/secrets.toml locally and in the Streamlit Cloud “Secrets” settings when deployed; never in source files.
+secrets.toml and .venv are listed in .gitignore.
+Decision weights, the idle threshold (30 days) and demo flags live in core/config.py.
+A DEMO_MODE flag labels all sample prices and impact numbers as demo data in the UI.
+12. Deployment and Demo Setup
+Item
+Plan
+Primary hosting
+Streamlit Community Cloud connected to the GitHub repo; main branch auto-deploys.
+Backup
+Run locally with streamlit run app.py on a laptop that has already loaded the app and database; keep a pre-recorded demo video and screenshots.
+Database on first run
+If data/circulo.db is missing, app runs scripts/seed.py automatically.
+Reset between demos
+Delete circulo.db or run the seed script to return to a clean demo state.
+Network dependence
+Core demo works without internet (deterministic matching). Only the optional LLM and vision features need a connection and must fail gracefully.
+ 
+13. Testing and Quality
+Unit checks on the matcher and scoring: the ESP32 example must return 100%, Arduino Uno and Nano 67%, and Borrow must outrank Buy New when an item is available.
+Manual end-to-end test of the MVP loop: need → results → decision → request → approve → return → impact updated.
+Concurrency check: two users requesting the same single-unit item; the second must see it as unavailable.
+Failure tests: no search results, empty input, AI call failure, database file missing.
+Final freeze one hour before the deadline: no new features, only critical bug fixes.
+14. Security and Privacy (Prototype Level)
+Parameterised SQL only; Streamlit escapes text it renders by default.
+Passwords stored as salted hashes; demo accounts clearly marked.
+Role checks on admin and owner-only actions (approve, reject, mark returned).
+Store only what is needed (name, email, department); no payment data exists in the system.
+Prototype is not production-hardened; production use would add real authentication (for example college single sign-on), HTTPS-only hosting, audit logs and a hosted database.
+15. Responsibility Map
+Member
+Stack areas owned
+Member 1: Frontend / UX
+Streamlit pages and navigation, ui/components.py, styling, session-state wiring, dashboard charts
+Member 2: Backend / data
+SQLite schema, db.py, seed.py, auth, items and transactions services, availability state machine, impact events
+Member 3 (user): AI + integration + pitch
+need_processor, resource_processor, matcher, decision_engine, rescue, capability dictionary, integration and testing, demo script and PPT
+ 
+16. Risks and Fallbacks
+Risk
+Fallback
+Streamlit Cloud loses the database on restart
+Rebuild from seed.py on startup; or move to hosted Postgres (only db.py changes).
+LLM or vision API fails or is slow
+Keyword/dictionary path and manual entry always available.
+Embedding model too heavy for hosting
+Stay with TF-IDF + capability dictionary.
+Integration problems between members
+Fixed module interfaces agreed in hour 0; shared repo; frequent merges.
+Demo-day network failure
+Local run plus recorded demo video.
+Scope creep
+Follow the build order; the MVP loop comes first, extras only after Phase 7.
+ 
+17. Build Order (Technical)
+Phase
+Build
+Done when
+1
+SQLite schema, db.py, seed.py
+App can read seeded items
+2
+I Have page: add resource with capability structuring
+New item appears in database
+3
+Need page: parse request and list candidates
+Typed need returns candidate items
+4
+Capability matching and ranking
+ESP32 example returns 100% / 67% / 67%
+5
+Decision engine and explanations
+Recommended option and reasons shown
+6
+Borrow transaction and availability state machine
+Item moves requested → borrowed → available
+7
+Impact dashboard
+Tiles and chart update after a borrow
+8
+Resource Rescue
+Idle items listed with Make Available
+9
+Optional Scan & Identify
+Photo suggests item, owner confirms
+ 
+Reaching Phase 7 gives a legitimate hackathon project; Phase 8 a stronger one; Phase 9 the wow factor.
+18. Summary
+CIRCULO is a Python application: a Streamlit multipage website on the front, plain Python service modules behind it, and a single SQLite database holding users, items, capabilities, requests, transactions, repairs and impact events. A deterministic capability dictionary and TF-IDF similarity understand and match needs, a weighted decision engine ranks Borrow, Repair, Buy Used and Buy New, and optional LLM and vision features sit on top with safe fallbacks. The whole system deploys from one GitHub repository and can be demonstrated from a laptop if the network fails.
